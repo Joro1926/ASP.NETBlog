@@ -15,7 +15,7 @@
             @Model.Content
         </p>
         <small class="author">
-            --author @Model.Author.FullName
+            Posted by @Model.Author.FullName
         </small>
         <footer class="pull-right">
             @Html.ActionLink("Edit", "Edit", "Article", new { @id = Model.Id }, new { @class = "btn btn-success btn-xs" })

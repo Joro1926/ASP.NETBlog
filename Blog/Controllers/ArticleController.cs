@@ -22,6 +22,7 @@ namespace Blog.Controllers
             {
                 var articles = database.Articles
                     .Include(a => a.Author)
+                    .Include(a => a.Tags)
                     .ToList();
 
                 return View(articles);
@@ -41,6 +42,7 @@ namespace Blog.Controllers
                 var article = database.Articles
                     .Where(a => a.Id == id)
                     .Include(a => a.Author)
+                    .Include(a => a.Tags)
                     .First();
 
                 if (article == null)
@@ -76,6 +78,7 @@ namespace Blog.Controllers
                 var user = db.Users.FirstOrDefault(u => u.UserName.Equals(this.User.Identity.Name));
 
                 var article = new Article(user.Id, model.Title, model.Content, model.CategoryId);
+                this.SetArticleTags(article, model, db);
 
                 db.Articles.Add(article);
                 db.SaveChanges();
@@ -98,7 +101,11 @@ namespace Blog.Controllers
                 var article = database.Articles
                     .Where(a => a.Id == id)
                     .Include(a => a.Author)
+                    .Include(a => a.Category)
+                    .Include(a => a.Tags)
                     .First();
+
+                ViewBag.Tags = string.Join(", ", article.Tags.Select(t => t.Name));
 
                 if (!IsUserAuthorizedToEdit(article))
                 {
@@ -180,6 +187,8 @@ namespace Blog.Controllers
                 model.CategoryId = article.CategoryId;
                 model.Categories = db.Categories.ToList();
 
+                model.Tags = string.Join(", ", article.Tags.Select(t => t.Name));
+
                 return View(model);
             }
         }
@@ -198,6 +207,8 @@ namespace Blog.Controllers
                     article.Content = model.Content;
                     article.CategoryId = model.CategoryId;
 
+                    this.SetArticleTags(article, model, db);
+
                     db.Entry(article).State = EntityState.Modified;
                     db.SaveChanges();
 
@@ -214,6 +225,28 @@ namespace Blog.Controllers
             bool isAuthor = article.IsAuthor(this.User.Identity.Name);
 
             return isAdmin || isAuthor;
+        }
+
+        private void SetArticleTags(Article article, ArticleViewModel model, BlogDbContext db)
+        {
+            var tagsStrings = model.Tags
+                .Split(new char[] { ',', ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .Distinct();
+
+            article.Tags.Clear();
+
+            foreach (var tagString in tagsStrings)
+            {
+                Tag tag = db.Tags.FirstOrDefault(t => t.Name.Equals(tagString));
+
+                if (tag == null)
+                {
+                    tag = new Tag() { Name = tagString };
+                    db.Tags.Add(tag);
+                }
+
+                article.Tags.Add(tag);
+            }
         }
     }
 }
