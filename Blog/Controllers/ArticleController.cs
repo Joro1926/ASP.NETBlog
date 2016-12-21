@@ -1,4 +1,5 @@
 ﻿using Blog.Models;
+using System;
 using System.Data.Entity;
 using System.Linq;
 using System.Net;
@@ -8,14 +9,12 @@ namespace Blog.Controllers
 {
     public class ArticleController : Controller
     {
-        //
         // GET: Article
         public ActionResult Index()
         {
             return RedirectToAction("List");
         }
 
-        //
         // GET: Article/List
         public ActionResult List()
         {
@@ -29,7 +28,6 @@ namespace Blog.Controllers
             }
         }
 
-        //
         // GET: Article/Details
         public ActionResult Details(int? id)
         {
@@ -54,42 +52,38 @@ namespace Blog.Controllers
             }
         }
 
-        //
         // GET: Article/Create
+        [HttpGet]
         [Authorize]
         public ActionResult Create()
         {
-            return View();
+            using (var database = new BlogDbContext())
+            {
+                var model = new ArticleViewModel();
+                model.Categories = database.Categories.OrderBy(c => c.Name).ToList();
+                return View(model);
+            }
         }
 
-        //
         // POST: Article/Create
         [HttpPost]
         [Authorize]
-        public ActionResult Create(Article article)
+        [ValidateAntiForgeryToken]
+        public ActionResult Create(ArticleViewModel model)
         {
-            if (ModelState.IsValid)
+            using (var db = new BlogDbContext())
             {
-                using (var database = new BlogDbContext())
-                {
-                    var authorId = database.Users
-                        .Where(u => u.UserName == this.User.Identity.Name)
-                        .First()
-                        .Id;
+                var user = db.Users.FirstOrDefault(u => u.UserName.Equals(this.User.Identity.Name));
 
-                    article.AuthorId = authorId;
+                var article = new Article(user.Id, model.Title, model.Content, model.CategoryId);
 
-                    database.Articles.Add(article);
-                    database.SaveChanges();
+                db.Articles.Add(article);
+                db.SaveChanges();
 
-                    return RedirectToAction("Index");
-                }
+                return RedirectToAction("List");
             }
-
-            return View(article);
         }
 
-        //
         // GET: Article/Delete
         [Authorize]
         public ActionResult Delete(int? id)
@@ -101,7 +95,6 @@ namespace Blog.Controllers
             
             using (var database = new BlogDbContext())
             {
-                // Get article from database
                 var article = database.Articles
                     .Where(a => a.Id == id)
                     .Include(a => a.Author)
@@ -112,18 +105,17 @@ namespace Blog.Controllers
                     return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
                 }
 
-                // Check if article exists
+                
                 if (article == null)
                 {
                     return HttpNotFound();
                 }
 
-                // Pass article to view
+                
                 return View(article);
             }
         }
 
-        //
         // POST: Article/Delete
         [HttpPost, Authorize]
         [ActionName("Delete")]
@@ -136,28 +128,28 @@ namespace Blog.Controllers
 
             using (var database = new BlogDbContext())
             {
-                // Get article from database
+                
                 var article = database.Articles
                     .Where(a => a.Id == id)
                     .Include(a => a.Author)
+                    .Include(a => a.Category)
                     .First();
 
-                // Check if article exists
+                
                 if (article == null)
                 {
                     return HttpNotFound();
                 }
 
-                // Delete article from database
+                
                 database.Articles.Remove(article);
                 database.SaveChanges();
 
-                // Redirect to index page
+                
                 return RedirectToAction("Index");
             }
         }
 
-        //
         // GET: Article/Edit
         [Authorize]
         public ActionResult Edit(int? id)
@@ -167,66 +159,52 @@ namespace Blog.Controllers
                 return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
             }
 
-            using (var database = new BlogDbContext())
+            using (var db = new BlogDbContext())
             {
-                // Get article from the database
-                var article = database.Articles
-                    .Where(a => a.Id == id)
-                    .First();
+                var article = db.Articles.FirstOrDefault(a => a.Id == id);
 
-                if (!IsUserAuthorizedToEdit(article))
+                if (!this.IsUserAuthorizedToEdit(article))
                 {
                     return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
                 }
 
-                // Check if article exists
                 if (article == null)
                 {
                     return HttpNotFound();
                 }
 
-                // Create the view model
                 var model = new ArticleViewModel();
-                model.Id = article.Id;
                 model.AuthorId = article.AuthorId;
                 model.Title = article.Title;
                 model.Content = article.Content;
+                model.CategoryId = article.CategoryId;
+                model.Categories = db.Categories.ToList();
 
-                // Show the editing view
                 return View(model);
             }
         }
 
-        //
         // POST: Article/Edit
         [HttpPost]
         [Authorize]
-        public ActionResult Edit(ArticleViewModel model)
+        public ActionResult Edit(int? id, ArticleViewModel model)
         {
-            // Check if model state is valid
             if (ModelState.IsValid)
             {
-                using (var database = new BlogDbContext())
+                using (var db = new BlogDbContext())
                 {
-                    // Get article from database
-                    var article = database.Articles
-                        .FirstOrDefault(a => a.Id == model.Id);
-
-                    // Set article title and content
-                    article.AuthorId = model.AuthorId;
+                    var article = db.Articles.FirstOrDefault(a => a.Id == id);
                     article.Title = model.Title;
                     article.Content = model.Content;
+                    article.CategoryId = model.CategoryId;
 
-                    // Save article state in database
-                    database.Entry(article).State = EntityState.Modified;
-                    database.SaveChanges();
+                    db.Entry(article).State = EntityState.Modified;
+                    db.SaveChanges();
 
-                    // Redirect to the index page
-                    return RedirectToAction("Index");
+                    return RedirectToAction("List");
                 }
             }
 
-            // If model state is invalid, return the same view
             return View(model);
         }
 

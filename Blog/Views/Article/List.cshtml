@@ -15,12 +15,21 @@
                             @Html.ActionLink(@article.Title, "Details", "Article", new { @id = article.Id }, null)
                         </h2>
                     </header>
+
                     <p>
-                        @article.Content
+                        @if (article.Content.Length > 60)
+                        {
+                            @Html.Raw(article.Content.Substring(0, 60) + " . . .")
+                        }
+                        else
+                        {
+                            @article.Content
+                        }
                     </p>
+
                     <footer class="pull-right">
                         <small class="author">
-                            --author @article.Author.FullName
+                            Posted by @article.Author.FullName
                         </small>
                     </footer>
                 </article>
