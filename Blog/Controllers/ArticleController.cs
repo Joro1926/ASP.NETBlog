@@ -45,12 +45,23 @@ namespace Blog.Controllers
                     .Include(a => a.Tags)
                     .First();
 
+                var user = database.Users.FirstOrDefault(u => u.UserName.Equals(this.User.Identity.Name));
+
+                var comments = database.Comments
+                    .Where(a => a.Article.Id == id)
+                    .ToList();
                 if (article == null)
                 {
                     return HttpNotFound();
                 }
 
-                return View(article);
+                var model = new TestModel();
+                model.Author = user;
+                model.Article = article;
+                model.CommentList = comments;
+
+                
+                return View(model);
             }
         }
 

@@ -1,4 +1,5 @@
-﻿@model Blog.Models.Article
+﻿@using Blog.Models
+@model Blog.Models.TestModel
 
 @{
     ViewBag.Title = "Details";
@@ -8,20 +9,66 @@
     <article>
         <header>
             <h2>
-                @Model.Title
+               Title: @Model.Article.Title
             </h2>
         </header>
-        <p>
-            @Model.Content
-        </p>
-        <small class="author">
-            Posted by @Model.Author.FullName
-        </small>
+        
+        <div class="well">
+               @Model.Article.Content
+        </div>
+        
         <footer class="pull-right">
-            @Html.ActionLink("Edit", "Edit", "Article", new { @id = Model.Id }, new { @class = "btn btn-success btn-xs" })
-            @Html.ActionLink("Delete", "Delete", "Article", new { @id = Model.Id }, new { @class = "btn btn-danger btn-xs" })
+            @Html.ActionLink("Edit", "Edit", "Article", new { @id = Model.Article.Id }, new { @class = "btn btn-success btn-xs" })
+            @Html.ActionLink("Delete", "Delete", "Article", new { @id = Model.Article.Id }, new { @class = "btn btn-danger btn-xs" })
             @Html.ActionLink("Back", "HomeView", "Home", null, new { @class = "btn btn-default btn-xs" })
         </footer>
     </article>
+
+    <div id="comments">
+        <h4>Comments:</h4>
+        @{
+            var commentModel = new CommentViewModel() { ArticleId = Model.Article.Id };
+        }
+        <div id="new-comment">
+            @if (User.Identity.IsAuthenticated)
+            {
+                <div class="row">
+                    <div class="col-md-8">
+                        @Html.ValidationSummary()
+                        @using (Ajax.BeginForm(
+                            "Add",
+                            "Comment",
+                            new { id = Model.Article.Id},
+                            new AjaxOptions() { UpdateTargetId = "comments-container", InsertionMode = InsertionMode.InsertBefore, OnSuccess = "updateCommentForm" },
+                            new { id = "add-comment-form" }))
+                        {
+                            @Html.TextAreaFor(m => m.Comment.Content, new { @class = "form-control", rows = 3, placeholder = "Write a comment...", id = "content" })
+                            <input type="submit" id="add-comment-button" value="Add comment" class="btn btn-primary" />
+                        }
+                    </div>
+                </div>
+            }
+            <script>
+    function updateCommentForm() {
+        $("#no-comments").hide();
+        $("#content").val("");
+    }
+            </script>
+        </div>
+
+        <div id="comments-container">
+            @if (Model.CommentList.Any())
+            {
+                foreach (var comment in Model.CommentList)
+                {
+                   <div class="well"> @comment.Content </div>
+                }
+            }
+            else
+            {
+                <div id="no-comments">There are no comments right now.</div>
+            }
+        </div>
+    </div>
 </div>
 <hr />
