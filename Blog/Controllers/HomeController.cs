@@ -13,9 +13,32 @@ namespace Blog.Controllers
     {
         public ActionResult Index()
         {
-            return RedirectToAction("ListCategories");
+            return RedirectToAction("HomeView");
         }
 
+        public ActionResult HomeView()
+        {
+            using (var database = new BlogDbContext())
+            {
+                var model = new HomeViewModel();
+
+                model.Articles = database.Articles
+                    .Include(a => a.Author)
+                    .Include(a => a.Tags)
+                    .ToList();
+
+                model.Categories = database.Categories
+                    .Include(c => c.Articles)
+                    .OrderBy(c => c.Name)
+                    .ToList();
+
+                model.Tags = database.Tags
+                    .OrderBy(t => t.Name )
+                    .ToList();
+
+                return View(model);
+            }
+        }
         public ActionResult ListCategories()
         {
             using(var database = new BlogDbContext())

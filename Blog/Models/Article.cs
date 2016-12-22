@@ -49,6 +49,8 @@ namespace Blog.Models
             
         private ICollection<Tag> tags;
 
+        public virtual ICollection<Comment> Comments { get; set; }
+
         public bool IsAuthor(string name)
         {
             return this.Author.UserName.Equals(name);
